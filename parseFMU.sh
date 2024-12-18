@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # On va parser tout le fichier xml et le mettre dans un fichier C.
-output_file="modelDescription.c"
+output_file="library/modelDescription.c"
 
 # Le début du fichier C
 cat <<EOT > "$output_file"
@@ -16,7 +16,7 @@ EOT
 
 # On doit commencer par parser le tag TypeDefinitions pour créer une enum pour chaque type
 #TODO: changer pour une variable qui stocke la string puis qui la print pour éviter le retour à la ligne
-lines=$(xmllint --xpath "//SimpleType" ./fmu/modelDescription.xml --format | grep -oP '<.*?>')
+lines=$(xmllint --xpath "//SimpleType" ./library/fmu/modelDescription.xml --format | grep -oP '<.*?>')
 if [ -n "$lines" ]; then
     cat <<EOT >> "$output_file"
 typedef enum { 
@@ -100,7 +100,7 @@ EOT
 # Basiquement, on réunit les deux autres fichiers sh en un seul pour cette étape, en utilisant xmllint
 
 
-lines=$(xmllint --xpath "//ScalarVariable" ./fmu/modelDescription.xml --format | grep -oP '<ScalarVariable.*?</ScalarVariable>')
+lines=$(xmllint --xpath "//ScalarVariable" ./library/fmu/modelDescription.xml --format | grep -oP '<ScalarVariable.*?</ScalarVariable>')
 
 # La variables lines contient sur chaque ligne une balise ScalarVariable et tout son contenu
 # On va maintenant parser chaque ligne pour en extraire les informations qui nous intéressent
@@ -246,7 +246,7 @@ echo "#define NVARIABLES $counter" >> "$output_file"
 
 
 # On va maintenant parser le <fmiModelDescription> pour extraire les informations qui nous intéressent
-model=$(xmllint --xpath '/*' ./fmu/modelDescription.xml | sed -n 's/\(<fmiModelDescription[^>]*>\).*/\1/p')
+model=$(xmllint --xpath '/*' ./library/fmu/modelDescription.xml | sed -n 's/\(<fmiModelDescription[^>]*>\).*/\1/p')
 
 # On va parser les informations suivantes:
 # - version

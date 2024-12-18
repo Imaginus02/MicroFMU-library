@@ -6,6 +6,11 @@ Ce projet a pour but de fournir une bibliothèque MicroPython permettant de lanc
 
 ### Problèmes actuels
 
+On doit faire :
+```shell
+sudo chmod +x ./parseFMU
+```
+
 On doit créer un générateur :
 ```python
 from FMUSimulator import *

@@ -7,10 +7,12 @@ prepare:
 		echo "Error: There should be exactly one .fmu file in the directory."; \
 		exit 1; \
 	fi; \
-	unzip -o $$fmu_files -d fmu/
+	unzip -o $$fmu_files -d library/fmu/
 	./parseFMU.sh
+	sed -i '/S->stopTime = stopTimeDefined ? stopTime : INFINITY;/s/stopTime : INFINITY;/\(fmi2Real\)stopTime : \(fmi2Real\)INFINITY;/' ./library/fmu/sources/fmi2Functions.c || true
+
 
 # Nettoyage du répertoire fmu/ et du fichier modelDescription.c
 clean:
-	rm -rf fmu/
-	rm -f modelDescription.c
+	rm -rf library/fmu/
+	rm -f library/modelDescription.c
