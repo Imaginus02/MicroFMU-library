@@ -1,0 +1,6 @@
+fmu/
+tests/
+*.fmu
+modelDescription.c
+testlibrary.c
+xmllintTest.sh
