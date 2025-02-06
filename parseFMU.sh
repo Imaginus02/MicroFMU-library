@@ -262,7 +262,10 @@ description=$(echo $model | grep -oP 'description="\K[^"]+')
 guid=$(echo $model | grep -oP 'guid="\K[^"]+')
 numberOfEventIndicators=$(echo $model | grep -oP 'numberOfEventIndicators="\K[^"]+')
 
-#La descriptio
+# Replace the placeholder in the micropython.cmake file with the modelName
+sed -i "s/FMI2_OVERRIDE_FUNCTION_PREFIX=\"[^\"]*\"/FMI2_OVERRIDE_FUNCTION_PREFIX=\"$modelName\"/" ./micropython.cmake
+# Replace the placeholder in the micropython.mk file with the modelName
+sed -i "s/DFMI2_OVERRIDE_FUNCTION_PREFIX=\"[^\"]*\"/DFMI2_OVERRIDE_FUNCTION_PREFIX=\"$modelName\"/" ./library/micropython.mk
 
 # On affiche les informations pour le debug
 #echo "version=$version, modelName=$modelName, description=$description, guid=$guid, numberOfEventIndicators=$numberOfEventIndicators"
