@@ -2,53 +2,44 @@
 
 Ce projet a pour but de fournir une bibliothèque MicroPython permettant de lancer des simulations FMU (Functional Mock-up Units).
 
-## Utilisation
-
-### Problèmes actuels
-
-On doit faire :
-```shell
-sudo chmod +x ./parseFMU
-```
-
-On doit créer un générateur :
-```python
-from FMUSimulator import *
-simInstance = setup_simulation(StartTime, EndTime, StepSize)
-for i in simInstance:
-	next(simInstance)
-```
-
-On peut modifier les valeurs avant et pendant la simulation (selon les variables) :
-```python
-bool change_variable_value(simInstance, variableIndex/VariableName, value)
-```
-
-Si on clone et utilise sur Unix, il faut faire un chmod +x sur tout les fichiers .sh
-
 ## Compilation
 
-Pour compiler micropython avec cette bibliothèque, suivez les étapes suivantes :
+Pour compiler MicroPython avec cette bibliothèque, suivez les étapes suivantes :
 
-1. Placez votre fichier FMU dans le répertoire de la bibliothèque.
-	- Actuellement, le compilation de décompresse pas l'archive fmu, il faut extraire son contenu vers un fichier fmu/ 
-2. Changez de répertoire et placez-vous dans celui du matériel cible.
-3. Compilez MicroPython avec l'option `USER_C_MODULES=[chemin vers le répertoire]`:
+1. Placez votre fichier FMU dans le répertoire de la bibliothèque (au même niveau que ce README).
+2. Lancez les commandes suivantes :
+	```shell
+	sudo chmod +x ./parseFMU
+	make
+	```
+3. Placez-vous dans le répertoire du port cible dans le projet MicroPython.
+4. Compilez MicroPython avec la commande suivante :
 
-```sh
-make USER_C_MODULES=path/to/your/library
-```
+	- Pour Unix :
+		```shell
+		make USER_C_MODULES=full/path/to/micropython.mk
+		```
+	- Pour ESP32 :
+		```shell
+		make USER_C_MODULES=full/path/to/micropython.cmake
+		```
 
 ## Structure du projet
+- `micropython.cmake` : Fichier CMake pour la compilation vers ESP32.
+- `parseFMU.sh` : Script pour analyser et extraire les fichiers FMU.
+- `Makefile` : Fichier Makefile principal pour la gestion de la compilation et du nettoyage du projet.
+- `library/` : Répertoire contenant le code du projet.
+	- `headers/` : Dossier des fichiers C fournis par le standard FMU nécessaires pour la compilation du simulateur.
+	- `micropython.mk` : Fichier Makefile pour la compilation vers Unix.
+	- `main.c` : Fichier C principal contenant l'implémentation du simulateur et des fonctions MicroPython.
 
-- `fmi2.c` : Contient les fonctions de chargement des FMU.
-- `testlibrary.c` : Contient des exemples de fonctions et de classes utilisables avec MicroPython.
-- `micropython.mk` : Fichier Makefile pour la compilation et le nettoyage du projet.
-- `headers/` : Dossier des fichiers C fournis par le standard FMU nécessaires pour la compilation du simulateur.
+
+## Utilisation
+
 
 ## Nettoyage
 
-Pour nettoyer le projet, utilisez la commande suivante :
+Pour nettoyer le projet, utilisez la commande suivante depuis le répertoire principal de la bibliothèque :
 
 ```sh
 make clean
