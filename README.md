@@ -12,29 +12,29 @@ Pour compiler MicroPython avec cette bibliothèque, suivez les étapes suivantes
 2. Clone and enter the MicroPython repository:
 
 ```shell
-$ git clone -b v1.24.1 --depth 1 --recurse-submodules --shallow-submodules https://github.com/micropython/micropython.git
-$ micropython_dir="$(pwd)/micropython"
+git clone -b v1.24.1 --depth 1 --recurse-submodules --shallow-submodules https://github.com/micropython/micropython.git
+micropython_dir="$(pwd)/micropython"
 ```
 
 3. Clone this repository inside the MicroPython directory
 
 ```shell
-$ cd $micropython_dir
-$ git clone https://github.com/Imaginus02/MicroFMU-library.git
-$ cd $micropython_dir/MicroFMU-library
+cd $micropython_dir
+git clone https://github.com/Imaginus02/MicroFMU-library.git
+cd $micropython_dir/MicroFMU-library
 ```
 
-1. Placez votre fichier FMU dans le répertoire de la bibliothèque (au même niveau que ce README).
+1. Placez votre fichier FMU dans le répertoire de la bibliothèque (au même niveau que ce README). Ce tutoriel utilise `BouncingBall.fmu`
 
 
 ```shell
-$ mv path/to/fmu/BouncingBall.fmu .
+cp path/to/fmu/BouncingBall.fmu .
 ```
 
 2. Assurez-vous que `parseFMU.sh` est exécutable:
 
 ```shell
-$	sudo chmod +x parseFMU.sh
+sudo chmod +x parseFMU.sh
 ```
 
 2. Lancez la commande make:
@@ -43,21 +43,20 @@ $	sudo chmod +x parseFMU.sh
 make
 ```
 
-## Step 3: Build and Run MicroPython with "urdflib"
+## Step 3: Build and Run MicroPython with "MicroPython-FMU"
 
 ### UNIX port
 
 3. Placez-vous dans le répertoire du port cible dans le projet MicroPython.
 
 ```bash
-$ cd "$micropython_dir/ports/unix"
+cd "$micropython_dir/ports/unix"
 ```
 4. Compilez MicroPython avec la commande suivante :
 
 ```shell
-$ make clean
-$ make submodules
-$ make USER_C_MODULES=$micropython_dir/MicroFMU-library
+make submodules
+make USER_C_MODULES=$micropython_dir/MicroFMU-library
 ```
 
 After build, you can run it by:
@@ -69,18 +68,45 @@ $ ./build-standard/micropython
 Initialize and run the simulation as follows:
 
 ```$ ./build-standard/micropython
-from FMUSimulator import *
-simInstance = setup_simulation(0, 3, 0.1)
-for i in simInstance:
-	print(simInstance)
+>>> import FMUSimulator as fmu
+>>> fmu.get_variables_names()
+('step', 'time', 'h', 'der(h)', 'v', 'der(v)', 'g', 'e')
+>>> fmu.get_variables_description()
+('Simulation step count', 'Simulation time', 'Position of the ball', 'Derivative of h', 'Velocity of the ball', 'Derivative of v', 'Gravity acting on the ball', 'Coefficient of restitution')
+>>> fmu.get_variables_base_values()
+(0, 0.0, 1.0, 0.0, 0.0, 0.0, -9.81, 0.7)
+>>> simulation = fmu.setup_simulation(0, 3, 0.1) # startTime, stopTime, stepSize
+>>> fmu.change_variable_value(simulation, 'h', 20)
+True
+>>> for step, time, h, der_h, v, der_v, g, e in simulation:
+...   print(time, h)
 ```
 
+With `BouncingBall.fmu`, you should get something like:
+
+```
+0.1 20.0
+0.2 19.9019
+... [ more lines ] ...
+2.800000000000001 8.034390000000011
+2.900000000000001 8.789760000000012
+``` 
+
+### ESP32 port 
 
 
-	- Pour ESP32 :
-		```shell
-		make USER_C_MODULES=full/path/to/micropython.cmake
-		```
+```bash
+cd "$micropython_dir/ports/esp32"
+```
+
+Follow the steps in the [README.md](https://github.com/micropython/micropython/blob/master/ports/esp32/README.md)
+
+Then, after `make submodules`, run `make` with the following arguments: 
+
+
+```
+make USER_C_MODULES=$micropython_dir/MicroFMU-library/micropython.cmake
+```
 
 ## Structure du projet
 - `micropython.cmake` : Fichier CMake pour la compilation vers ESP32.
