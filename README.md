@@ -6,19 +6,77 @@ Ce projet a pour but de fournir une bibliothèque MicroPython permettant de lanc
 
 Pour compiler MicroPython avec cette bibliothèque, suivez les étapes suivantes :
 
+
+1. Open your terminal.
+
+2. Clone and enter the MicroPython repository:
+
+```shell
+$ git clone -b v1.24.1 --depth 1 --recurse-submodules --shallow-submodules https://github.com/micropython/micropython.git
+$ micropython_dir="$(pwd)/micropython"
+```
+
+3. Clone this repository inside the MicroPython directory
+
+```shell
+$ cd $micropython_dir
+$ git clone https://github.com/Imaginus02/MicroFMU-library.git
+$ cd $micropython_dir/MicroFMU-library
+```
+
 1. Placez votre fichier FMU dans le répertoire de la bibliothèque (au même niveau que ce README).
-2. Lancez les commandes suivantes :
-	```shell
-	sudo chmod +x ./parseFMU
-	make
-	```
+
+
+```shell
+$ mv path/to/fmu/BouncingBall.fmu .
+```
+
+2. Assurez-vous que `parseFMU.sh` est exécutable:
+
+```shell
+$	sudo chmod +x parseFMU.sh
+```
+
+2. Lancez la commande make:
+
+```shell
+make
+```
+
+## Step 3: Build and Run MicroPython with "urdflib"
+
+### UNIX port
+
 3. Placez-vous dans le répertoire du port cible dans le projet MicroPython.
+
+```bash
+$ cd "$micropython_dir/ports/unix"
+```
 4. Compilez MicroPython avec la commande suivante :
 
-	- Pour Unix :
-		```shell
-		make USER_C_MODULES=full/path/to/micropython.mk
-		```
+```shell
+$ make clean
+$ make submodules
+$ make USER_C_MODULES=$micropython_dir/MicroFMU-library
+```
+
+After build, you can run it by:
+
+```shell
+$ ./build-standard/micropython
+```
+
+Initialize and run the simulation as follows:
+
+```$ ./build-standard/micropython
+from FMUSimulator import *
+simInstance = setup_simulation(0, 3, 0.1)
+for i in simInstance:
+	print(simInstance)
+```
+
+
+
 	- Pour ESP32 :
 		```shell
 		make USER_C_MODULES=full/path/to/micropython.cmake
