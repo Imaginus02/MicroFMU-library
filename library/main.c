@@ -177,7 +177,9 @@ typedef struct {
 } SimulationState;
 
 
-FMU fmu;
+FMU *fmu;
+
+
 /**
  * @brief Converts an fmi2Status enum value to its corresponding string representation.
  *
@@ -266,18 +268,56 @@ void cleanupSimulation(FMU *fmu, SimulationState *state) {
     }
 
     // Free state variables
-    if (state->x) free(state->x);
-    if (state->xdot) free(state->xdot);
-    if (state->z) free(state->z);
-    if (state->prez) free(state->prez);
+    if (state->x) {
+#ifdef MICROPY_ESP_IDF_4
+        m_free(state->x);
+#else
+        m_free(state->x, state->nx * sizeof(double));
+#endif
+    }
+    if (state->xdot) {
+#ifdef MICROPY_ESP_IDF_4
+        m_free(state->xdot);
+#else
+        m_free(state->xdot, state->nx * sizeof(double));
+#endif
+    }
+    if (state->z) {
+#ifdef MICROPY_ESP_IDF_4
+        m_free(state->z);
+#else
+        m_free(state->z, state->nz * sizeof(double));
+#endif
+    }
+    if (state->prez) {
+#ifdef MICROPY_ESP_IDF_4
+        m_free(state->prez);
+#else
+        m_free(state->prez, state->nz * sizeof(double));
+#endif
+    }
 
     // Free output array
     if (state->output) {
-        free(state->output);
+#ifdef MICROPY_ESP_IDF_4
+        m_free(state->output);
+#else
+        m_free(state->output, state->nVariables * sizeof(double));
+#endif
     }
 
     // Free the state structure itself
-    free(state);
+#ifdef MICROPY_ESP_IDF_4
+    m_free(state);
+#else
+    m_free(state, sizeof(SimulationState));
+#endif
+
+#ifdef MICROPY_ESP_IDF_4
+    m_free(fmu);
+#else
+    m_free(fmu, sizeof(FMU));
+#endif
 }
 
 /**
@@ -289,8 +329,14 @@ void cleanupSimulation(FMU *fmu, SimulationState *state) {
  * @return SimulationState* Pointer to initialized simulation state, NULL if error
  */
 SimulationState* initializeSimulation(FMU *fmu, double tStart, double tEnd, double h) {
-    SimulationState *state = (SimulationState*)calloc(1, sizeof(SimulationState));
-    if (!state) return NULL;
+
+    INFO("Initializing simulation\n");
+    SimulationState *state = (SimulationState*)m_malloc(1*sizeof(SimulationState));
+    if (!state) {
+        INFO("Memory allocation failed for simulation state\n");
+        return NULL;
+    }
+    INFO("Allocated %u bytes for simulation state\n", sizeof(SimulationState));
 
     state->time = tStart;
     state->h = h;
@@ -301,12 +347,20 @@ SimulationState* initializeSimulation(FMU *fmu, double tStart, double tEnd, doub
     state->nStepEvents = 0;
 
     // Setup callback functions
-    fmi2CallbackFunctions callbacks = {fmuLogger, calloc, free, NULL, fmu};
+    void* my_calloc(size_t num, size_t size) {
+        void* ptr = m_malloc(num*size);
+        printf("Allocated %zu bytes\n", num * size);
+        return ptr;
+    }
+
+    fmi2CallbackFunctions callbacks = {fmuLogger, my_calloc, free, NULL, fmu};
 
     // Instantiate the FMU
+    INFO("Instantiating FMU\n");
     state->component = fmu->instantiate(model.modelName, fmi2ModelExchange, 
                                       model.guid, NULL, &callbacks, fmi2False, fmi2False);
     if (!state->component) {
+        INFO("FMU instantiation failed\n");
         cleanupSimulation(fmu,state);
         return NULL;
     }
@@ -316,45 +370,69 @@ SimulationState* initializeSimulation(FMU *fmu, double tStart, double tEnd, doub
     state->nz = model.numberOfEventIndicators;
 
     // Allocate memory for states and indicators
-    state->x = (double*)calloc(state->nx, sizeof(double));
-    state->xdot = (double*)calloc(state->nx, sizeof(double));
-
-    if (state->nz > 0) {
-        state->z = (double*)calloc(state->nz, sizeof(double));
-        state->prez = (double*)calloc(state->nz, sizeof(double));
-    }
-
-    if ((!state->x || !state->xdot) || 
-        (state->nz > 0 && (!state->z || !state->prez))) {
-        // Cleanup and return on allocation failure
-        cleanupSimulation(fmu,state);
+    INFO("Allocating memory for continuous state variables\n");
+    state->x = (double*)m_malloc(state->nx*sizeof(double));
+    if (!state->x) {
+        INFO("Memory allocation failed for continuous state variables\n");
+        cleanupSimulation(fmu, state);
         return NULL;
     }
+
+    INFO("Allocating memory for state derivatives\n");
+    state->xdot = (double*)m_malloc(state->nx*sizeof(double));
+    if (!state->xdot) {
+        INFO("Memory allocation failed for state derivatives\n");
+        cleanupSimulation(fmu, state);
+        return NULL;
+    }
+
+    if (state->nz > 0) {
+        INFO("Allocating memory for event indicators\n");
+        state->z = (double*)m_malloc(state->nz*sizeof(double));
+        if (!state->z) {
+            INFO("Memory allocation failed for event indicators\n");
+            cleanupSimulation(fmu, state);
+            return NULL;
+        }
+
+        state->prez = (double*)m_malloc(state->nz*sizeof(double));
+        if (!state->prez) {
+            INFO("Memory allocation failed for previous event indicators\n");
+            cleanupSimulation(fmu, state);
+            return NULL;
+        }
+    }
+
+    INFO("Memory allocation of %u bytes for state variables and event indicators successful\n", 
+         state->nx*sizeof(double) + state->nx*sizeof(double) + state->nz*sizeof(double) + state->nz*sizeof(double));
 
     // Setup experiment
     fmi2Boolean toleranceDefined = fmi2False;
     fmi2Real tolerance = 0;
+    INFO("Setting up experiment\n");
     fmi2Status fmi2Flag = fmu->setupExperiment(state->component, toleranceDefined, 
                                               tolerance, state->tStart, fmi2True, state->tEnd);
     if (fmi2Flag > fmi2Warning) {
+        INFO("Experiment setup failed\n");
         // Cleanup and return on setup failure
         cleanupSimulation(fmu,state);
         return NULL;
     }
 
     // Initialize the FMU
+    INFO("Entering initialization mode\n");
     fmi2Flag = fmu->enterInitializationMode(state->component);
     if (fmi2Flag > fmi2Warning) {
+        INFO("Entering initialization mode failed\n");
         cleanupSimulation(fmu,state);
         return NULL;
     }
     
-
     // Initialize variables and output array
-	// Output is an array which value get replaced with each itearation
+    INFO("Initializing variables and output array\n");
     get_variable_list(&state->variables);
     state->nVariables = get_variable_count();
-    state->output = (double*)calloc(state->nVariables, sizeof(double*));
+    state->output = (double*)m_malloc(state->nVariables*sizeof(double*));
 
     // Initialize first output values
     for (int i = 0; i < state->nVariables; i++) {
@@ -368,7 +446,9 @@ SimulationState* initializeSimulation(FMU *fmu, double tStart, double tEnd, doub
             state->output[i] = (double)intValue;
         }
     }
+    INFO("Allocated %u bytes for output array\n", state->nVariables*sizeof(double));
 
+    INFO("Simulation initialization complete\n");
     return state;
 }
 
@@ -567,10 +647,11 @@ static mp_obj_t get_output_tuple(SimulationState* state) {
 static mp_obj_t my_generator_next(mp_obj_t self_in) {
 	example_My_Generator_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
-	simulationDoStep(&fmu, &self->state);
+	simulationDoStep(fmu, &self->state);
 
 	if (self->state.time >= self->state.tEnd || self->state.eventInfo.terminateSimulation) {
 		return mp_make_stop_iteration(MP_OBJ_NULL); // Signal de fin
+        cleanupSimulation(fmu, &self->state);
 	}
 
 	return get_output_tuple(&self->state);
@@ -611,14 +692,16 @@ static mp_obj_t example_simulate(size_t n_args, const mp_obj_t *args) {
 	double tEnd = mp_obj_get_float(args[1]);
 	double h = mp_obj_get_float(args[2]);
 
-	loadFunctions(&fmu);
+    fmu = (FMU*)m_malloc(1*sizeof(FMU));
+
+	loadFunctions(fmu);
 	//simulate(&fmu, tStart, tEnd, h);
 
-	SimulationState *state = initializeSimulation(&fmu, tStart, tEnd, h);
+	SimulationState *state = initializeSimulation(fmu, tStart, tEnd, h);
     mp_obj_t result = mp_obj_new_list(0, NULL);
 
     while (!(state->time >= state->tEnd || state->eventInfo.terminateSimulation)) {
-        simulationDoStep(&fmu, state);
+        simulationDoStep(fmu, state);
         mp_obj_list_append(result, get_output_tuple(state));
     }
 
@@ -630,12 +713,16 @@ static mp_obj_t example_setup_simulation(size_t n_args, const mp_obj_t *args) {
 	double tEnd = mp_obj_get_float(args[1]);
 	double h = mp_obj_get_float(args[2]);
 
-	loadFunctions(&fmu);
+    fmu = (FMU*)m_malloc(1*sizeof(FMU));
+    INFO("Allocated %u bytes for FMU\n", sizeof(FMU));
+
+	loadFunctions(fmu);
 	SimulationState *state;
-	state = initializeSimulation(&fmu, tStart, tEnd, h);
+	state = initializeSimulation(fmu, tStart, tEnd, h);
 
 	example_My_Generator_obj_t *self;
 	self = mp_obj_malloc(example_My_Generator_obj_t, &example_type_MyGenerator);
+    INFO("Allocated %u bytes for MyGenerator\n", sizeof(example_My_Generator_obj_t));
 	self->base.type = &example_type_MyGenerator;
 	self->state = *state;
 	return MP_OBJ_FROM_PTR(self);
@@ -783,11 +870,47 @@ static mp_obj_t example_get_variables_description(size_t n_args, const mp_obj_t 
     return process_variables(n_args, args, extract_description);
 }
 
+
+static mp_obj_t example_test_alloc(mp_obj_t size) {
+    void *ptr = m_malloc(mp_obj_get_int(size)*sizeof(float));
+    if (ptr == NULL) {
+        mp_raise_msg(&mp_type_MemoryError, "Memory allocation failed");
+        return mp_obj_new_int(-1);
+    }
+    INFO("Allocated %lu bytes at %p\n", mp_obj_get_int(size) * sizeof(float), ptr);
+    return mp_obj_new_int((intptr_t)ptr);
+}
+
+static mp_obj_t example_test_store(mp_obj_t ptr, mp_obj_t pos, mp_obj_t value) {
+    float *array = (float *)(intptr_t)mp_obj_get_int(ptr);
+    array[mp_obj_get_int(pos)] = (float)mp_obj_get_float(value);
+    return mp_const_none;
+}
+
+static mp_obj_t example_test_see(mp_obj_t ptr, mp_obj_t pos) {
+    float *array = (float *)(intptr_t)mp_obj_get_int(ptr);
+    return mp_obj_new_float(array[mp_obj_get_int(pos)]);
+}
+
+static mp_obj_t example_test_free(mp_obj_t ptr, mp_obj_t size) {
+    #ifdef MICROPY_ESP_IDF_4
+        m_free((void *)(intptr_t)mp_obj_get_int(ptr));
+    #else
+        m_free((void *)(intptr_t)mp_obj_get_int(ptr), mp_obj_get_int(size)*sizeof(float));
+    #endif
+    return mp_const_none;
+}
+
+
 static MP_DEFINE_CONST_FUN_OBJ_0(example_get_variable_count_obj, example_get_variable_count);
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(example_change_variable_value_obj, 3, 3, example_change_variable_value);
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(example_get_variable_names_obj, 0, NVARIABLES, example_get_variable_names);
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(example_get_variables_base_values_obj, 0, NVARIABLES, example_get_variables_base_values);
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(example_get_variables_description_obj, 0, NVARIABLES, example_get_variables_description);
+static MP_DEFINE_CONST_FUN_OBJ_1(example_test_alloc_obj, example_test_alloc);
+static MP_DEFINE_CONST_FUN_OBJ_3(example_test_store_obj, example_test_store);
+static MP_DEFINE_CONST_FUN_OBJ_2(example_test_see_obj, example_test_see);
+static MP_DEFINE_CONST_FUN_OBJ_2(example_test_free_obj, example_test_free);
 
 // On va mapper les noms des variables et des class :
 static const mp_rom_map_elem_t example_module_globals_table[] = {
@@ -800,6 +923,11 @@ static const mp_rom_map_elem_t example_module_globals_table[] = {
 	{ MP_ROM_QSTR(MP_QSTR_get_variables_description), MP_ROM_PTR(&example_get_variables_description_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_get_variable_count), MP_ROM_PTR(&example_get_variable_count_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_change_variable_value), MP_ROM_PTR(&example_change_variable_value_obj) },
+    { MP_ROM_QSTR(MP_QSTR_test_alloc), MP_ROM_PTR(&example_test_alloc_obj) },
+    { MP_ROM_QSTR(MP_QSTR_test_store), MP_ROM_PTR(&example_test_store_obj) },
+    { MP_ROM_QSTR(MP_QSTR_test_see), MP_ROM_PTR(&example_test_see_obj) },
+    { MP_ROM_QSTR(MP_QSTR_test_free), MP_ROM_PTR(&example_test_free_obj) }
+
 };
 static MP_DEFINE_CONST_DICT(example_module_globals, example_module_globals_table);
 
@@ -810,4 +938,4 @@ const mp_obj_module_t example_user_testlibrary = {
 };
 
 // Enregistrement le module pour le rendre accessible sous python :
-MP_REGISTER_MODULE(MP_QSTR_FMUSimulator, example_user_testlibrary);
+MP_REGISTER_MODULE(MP_QSTR_ufmu, example_user_testlibrary);

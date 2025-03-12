@@ -17,9 +17,10 @@ SRC_USERMOD += $(CLIBRARY_MOD_DIR)/fmu/sources/cosimulation.c
 CFLAGS_USERMOD += -I$(CLIBRARY_MOD_DIR) \
                   -I$(CLIBRARY_MOD_DIR)/headers \
                   -I$(CLIBRARY_MOD_DIR)/fmu/sources \
-                  -Wall -g -Wno-double-promotion -Wno-error\
-                  -DFMI2_OVERRIDE_FUNCTION_PREFIX="Stair" \
-                  -fno-common -DFMI_VERSION=2
+                  -Wall -Og -Wno-double-promotion -Wno-error\
+                  -DFMI2_OVERRIDE_FUNCTION_PREFIX="" \
+                  -fno-common -DFMI_VERSION=2 \
+                  -DDEBUG -Wno-format
 
 $(info Compiling with: $(CC) $(CFLAGS) $(CFLAGS_USERMOD))
 #-Wno-double-promotion #-DMODEL_IDENTIFIER=BouncingBall -DModelFMI_COSIMULATION=0
