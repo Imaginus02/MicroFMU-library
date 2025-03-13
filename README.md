@@ -8,7 +8,7 @@ To compile MicroPython with this library, follow these steps:
 
 1. Open your terminal.
 
-2. Clone and enter the MicroPython repository:
+2. Clone and enter the MicroPython repository as well as set the `micropython_dir` variable:
 
 ```shell
 git clone -b v1.24.1 --depth 1 --recurse-submodules --shallow-submodules https://github.com/micropython/micropython.git
@@ -29,10 +29,11 @@ cd $micropython_dir/MicroFMU-library
 cp path/to/fmu/BouncingBall.fmu .
 ```
 
-5. Ensure that `parseFMU.sh` is executable:
+5. Ensure that `parseFMU.sh` and `changeCode.sh` are executable:
 
 ```shell
 sudo chmod +x parseFMU.sh
+sudo chmod +x changeCode.sh
 ```
 
 6. Run the make command:
@@ -83,7 +84,7 @@ cd "$micropython_dir/ports/esp32"
 *TODO: Add specific instructions for WSL1.*
 
 #### On WSL2
-Open PowerShell and run the following command to list all USB connected devices (you may need to install a powershell library using this [tutorial](https://learn.microsoft.com/en-us/windows/wsl/connect-usb):
+Open PowerShell and run the following command to list all USB connected devices (you may need to install a powershell library using this [tutorial](https://learn.microsoft.com/en-us/windows/wsl/connect-usb)):
 
 ```powershell
 usbipd list
@@ -164,12 +165,25 @@ This will remove the `fmu` directory and its contents, as well as the modelDescr
 
 - The `.fmu` files will be automatically decompressed into the `fmu` directory during compilation.  
 - The C simulator, without the Python functions, is available [here](https://github.com/Imaginus02/FMUSimulator)
+- To enable debugging, when preparing the library, add the DEBUG=1 arguement:
+```bash
+make DEBUG=1
+```
+Then when you compile Micropython, add those two arguements:
+#### Unix
+```bash
+make DEBUG=1 STRIP= USER_C_MODULES=$micropython_dir/MicroFMU-library/micropython.cmake
+```
+#### ESP32
+```bash
+make deploy DEBUG=1 STRIP= USER_C_MODULES=$micropython_dir/MicroFMU-library/micropython.cmake
+```
 
 ## Licenses
 
 ### fmuSDK
 
-The files main.c and fmi2.c are based on those from the GitHub project [fmuSDK](https://github.com/qtronic/fmusdk)  
+The file main.c is based on those from the GitHub project [fmuSDK](https://github.com/qtronic/fmusdk)  
 
 Copyright (c) 2008-2018, QTronic GmbH. All rights reserved. The FMU SDK is licensed by the copyright holder under the 2-Clause BSD License:
 

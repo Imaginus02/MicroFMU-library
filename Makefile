@@ -21,7 +21,13 @@ prepare:
 
 	@./changeCode.sh
 
-
+ifeq ($(DEBUG),1)
+	@sed -i 's/^#\(.*-DDEBUG\)/\1/' library/micropython.mk
+	@sed -i 's/^#\(.*-DDEBUG\)/\1/' micropython.cmake
+else
+	@sed -i '/-DDEBUG/ s/^[^#]/#&/' library/micropython.mk
+	@sed -i '/-DDEBUG/ s/^[^#]/#&/' micropython.cmake
+endif
 
 # Nettoyage
 clean:
