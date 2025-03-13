@@ -37,9 +37,9 @@ find "$SEARCH_DIR" -type f -name '*.c' | while read -r file; do
     perl -0777 -pe '
         my $orig = $_;
         s{
-            (\b\w+\b)\s*=\s*(?:\(\s*\w+\s*\*\s*\)\s*)?calloc\s*\(\s*(.+?)\s*,\s*sizeof\s*\(\s*(\w+)\s*\)\s*\)
+            (\b\w+\b)\s*=\s*(?:\(\s*\w+\s*\*\s*\)\s*)?calloc\s*\(\s*(.+?)\s*,\s*sizeof\s*\(\s*(\w+)\s*\)\s*\);
         }{
-            "$1 = m_malloc(($2) * sizeof($3))"
+            "#ifdef MICROPY_ESP_IDF_4\n        $1 = m_malloc(($2) * sizeof($3));\n#else\n        $1 = calloc($2, sizeof($3));\n#endif"
         }egx;
         $_ eq $orig ? exit(1) : $_  # Return false if no changes made
     ' "$file" > "$tmpfile" && mv "$tmpfile" "$file" || rm "$tmpfile"
@@ -97,10 +97,11 @@ find "$SEARCH_DIR" -type f -name '*.c' | while read -r file; do
         }
         
         # Replace free calls, being careful to match variable names from .alloc file
-        s{
-            \bfree\s*\(\s*(.*?)\s*\);
+		s{
+			(.*\b)free\s*\(\s*(.*?)\s*\);
         }{
-            my $ptr = $1;
+			my $bfr = $1;
+            my $ptr = $2;
             my $base = clean_var_name($ptr);
             
             open(my $debug, ">>", "'"$debug_file"'");
@@ -111,10 +112,19 @@ find "$SEARCH_DIR" -type f -name '*.c' | while read -r file; do
             if (exists $allocs{$base}) {
                 my ($n, $type) = split(/\|/, $allocs{$base});
                 print $debug "  MATCHED with: $base -> $n, $type\n";
-                $result = "#ifdef MICROPY_ESP_IDF_4\n        m_free($ptr);\n#else\n        m_free($ptr, ($n) * sizeof($type));\n#endif";
+                #$result = "#ifdef MICROPY_ESP_IDF_4\n        m_free($ptr);\n#else\n        m_free($ptr, ($n) * sizeof($type));\n#endif";
+				if ($bfr =~ /.*\bif\b.*/) {
+					$result = "$bfr\n{\n#ifdef MICROPY_ESP_IDF_4\n        m_free($ptr);\n#else\n        free($ptr);\n#endif\n}";
+                } else {
+                    $result = "#ifdef MICROPY_ESP_IDF_4\n        m_free($ptr);\n#else\n        free($ptr);\n#endif";
+                }
             } else {
                 print $debug "  NOT MATCHED: Simple replacement\n";
-                $result = "m_free($ptr);";
+                if ($bfr =~ /.*\bif\b.*/) {
+                    $result = "$bfr\n{\n#ifdef MICROPY_ESP_IDF_4\n        m_free($ptr);\n#else\n        free($ptr);\n#endif\n}";
+                } else {
+                    $result = "#ifdef MICROPY_ESP_IDF_4\n        m_free($ptr);\n#else\n        free($ptr);\n#endif";
+                }
             }
             close($debug);
             $result;
@@ -135,12 +145,12 @@ find "$SEARCH_DIR" -type f -name '*.c' | while read -r file; do
     
     # Perform the replacement and only write back if there's a change
     perl -0777 -pe '
-        my $orig = $_;
-        s{
-            \brealloc\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\)
-        }{
-            "m_realloc($1, $2)"
-        }egx;
+		my $orig = $_;
+		s{
+			(.*\s*)\brealloc\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\)
+		}{
+			"#ifdef MICROPY_ESP_IDF_4\n        ${1}m_realloc($2, $3);\n#else\n        ${1}realloc($2, $3);\n#endif"
+		}egx;
         $_ eq $orig ? exit(1) : $_  # Return false if no changes made
     ' "$file" > "$tmpfile" && mv "$tmpfile" "$file" || rm "$tmpfile"
 done
