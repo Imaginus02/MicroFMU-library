@@ -22,7 +22,7 @@ target_include_directories(usermod_clibrary INTERFACE
 target_compile_definitions(usermod_clibrary INTERFACE FMI2_OVERRIDE_FUNCTION_PREFIX="")
 
 # Add DEBUG argument to the compilation flags
-target_compile_options(usermod_clibrary INTERFACE -DDEBUG)
+# target_compile_options(usermod_clibrary INTERFACE -DDEBUG)
 
 
 # Link the INTERFACE library to the usermod target

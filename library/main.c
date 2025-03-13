@@ -618,16 +618,16 @@ fmi2Status simulationDoStep(FMU *fmu, SimulationState *state) {
 
 
 // Structure pour stocker l'état du générateur
-typedef struct example_My_Generator_obj_t {
+typedef struct example_Simulation_Instance_obj_t {
 	mp_obj_base_t base;
 	SimulationState state;
-} example_My_Generator_obj_t;
+} example_Simulation_Instance_obj_t;
 
-// Fonction print, gère MyGenerator.__repr__ et MyGenerator.__str__
-static void example_MyGenerator_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
-	example_My_Generator_obj_t *self = MP_OBJ_TO_PTR(self_in);
+// Fonction print, gère SimulationInstance.__repr__ et SimulationInstance.__str__
+static void example_SimulationInstance_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
+	example_Simulation_Instance_obj_t *self = MP_OBJ_TO_PTR(self_in);
 	if (kind == PRINT_STR) {
-		mp_printf(print, "MyGenerator(%d, %d)", self->state.nSteps*self->state.h, self->state.tEnd);
+		mp_printf(print, "SimulationInstance (%d, %d)", self->state.nSteps*self->state.h, self->state.tEnd);
 	} else {
 		mp_printf(print, "%d", self->state.nSteps);
 	}
@@ -644,8 +644,8 @@ static mp_obj_t get_output_tuple(SimulationState* state) {
 }
 
 // Fonction "itérable" appelée pour obtenir le prochain élément
-static mp_obj_t my_generator_next(mp_obj_t self_in) {
-	example_My_Generator_obj_t *self = MP_OBJ_TO_PTR(self_in);
+static mp_obj_t example_SimulationInstance_next(mp_obj_t self_in) {
+	example_Simulation_Instance_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
 	simulationDoStep(fmu, &self->state);
 
@@ -660,14 +660,14 @@ static mp_obj_t my_generator_next(mp_obj_t self_in) {
 
 // Définition du type
 MP_DEFINE_CONST_OBJ_TYPE(
-	example_type_MyGenerator,
-	MP_QSTR_MyGenerator,
+	example_type_SimulationInstance,
+	MP_QSTR_simulation_instance,
 	MP_TYPE_FLAG_ITER_IS_ITERNEXT,
-	print, example_MyGenerator_print,
-	//make_new, my_generator_make_new,
-	iter, my_generator_next//,
-	//locals_dict,&example_MyGenerator_locals_dict
-	);
+	print, example_SimulationInstance_print,
+	//make_new, Simulation_Instance_make_new,
+	iter, example_SimulationInstance_next//,
+	//locals_dict,&example_SimulationInstance_locals_dict
+);
 
 
 /**
@@ -720,10 +720,11 @@ static mp_obj_t example_setup_simulation(size_t n_args, const mp_obj_t *args) {
 	SimulationState *state;
 	state = initializeSimulation(fmu, tStart, tEnd, h);
 
-	example_My_Generator_obj_t *self;
-	self = mp_obj_malloc(example_My_Generator_obj_t, &example_type_MyGenerator);
-    INFO("Allocated %u bytes for MyGenerator\n", sizeof(example_My_Generator_obj_t));
-	self->base.type = &example_type_MyGenerator;
+	example_Simulation_Instance_obj_t *self;
+	self = mp_obj_malloc(example_Simulation_Instance_obj_t, &example_type_SimulationInstance);
+    INFO("Allocated %u bytes for SimulationInstance\n", sizeof(example_Simulation_Instance_obj_t));
+	self->base.type = &example_type_SimulationInstance
+;
 	self->state = *state;
 	return MP_OBJ_FROM_PTR(self);
 }
@@ -771,7 +772,7 @@ static mp_obj_t example_change_variable_value(size_t n_args, const mp_obj_t *arg
 
 	//ModelInstance* instance = (ModelInstance*)self->state.component;
 	//printf("ValueReference: %ld\n", mp_obj_get_int(ValueReference));
-	example_My_Generator_obj_t *self = MP_OBJ_TO_PTR(generator);
+	example_Simulation_Instance_obj_t *self = MP_OBJ_TO_PTR(generator);
 	const double val = mp_obj_get_float(value);
 	size_t index = 0;
 	fmi2Status status = setFloat64(self->state.component, mp_obj_get_int(ValueReference)-1, &val, 1, &index);
@@ -870,7 +871,7 @@ static mp_obj_t example_get_variables_description(size_t n_args, const mp_obj_t 
     return process_variables(n_args, args, extract_description);
 }
 
-
+#ifdef DEBUG
 static mp_obj_t example_test_alloc(mp_obj_t size) {
     void *ptr = m_malloc(mp_obj_get_int(size)*sizeof(float));
     if (ptr == NULL) {
@@ -900,6 +901,7 @@ static mp_obj_t example_test_free(mp_obj_t ptr, mp_obj_t size) {
     #endif
     return mp_const_none;
 }
+#endif
 
 
 static MP_DEFINE_CONST_FUN_OBJ_0(example_get_variable_count_obj, example_get_variable_count);
@@ -907,26 +909,30 @@ static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(example_change_variable_value_obj, 3,
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(example_get_variable_names_obj, 0, NVARIABLES, example_get_variable_names);
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(example_get_variables_base_values_obj, 0, NVARIABLES, example_get_variables_base_values);
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(example_get_variables_description_obj, 0, NVARIABLES, example_get_variables_description);
+#ifdef DEBUG
 static MP_DEFINE_CONST_FUN_OBJ_1(example_test_alloc_obj, example_test_alloc);
 static MP_DEFINE_CONST_FUN_OBJ_3(example_test_store_obj, example_test_store);
 static MP_DEFINE_CONST_FUN_OBJ_2(example_test_see_obj, example_test_see);
 static MP_DEFINE_CONST_FUN_OBJ_2(example_test_free_obj, example_test_free);
+#endif
 
 // On va mapper les noms des variables et des class :
 static const mp_rom_map_elem_t example_module_globals_table[] = {
 	{ MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_testlibrary)},
 	{ MP_ROM_QSTR(MP_QSTR_simulate), MP_ROM_PTR(&example_simulate_obj)},
 	{ MP_ROM_QSTR(MP_QSTR_setup_simulation), MP_ROM_PTR(&example_setup_simulation_obj)},
-	{ MP_ROM_QSTR(MP_QSTR_MyGenerator), MP_ROM_PTR(&example_type_MyGenerator) },
+	{ MP_ROM_QSTR(MP_QSTR_simulation_instance), MP_ROM_PTR(&example_type_SimulationInstance) },
 	{ MP_ROM_QSTR(MP_QSTR_get_variables_names), MP_ROM_PTR(&example_get_variable_names_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_get_variables_base_values), MP_ROM_PTR(&example_get_variables_base_values_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_get_variables_description), MP_ROM_PTR(&example_get_variables_description_obj) },
 	{ MP_ROM_QSTR(MP_QSTR_get_variable_count), MP_ROM_PTR(&example_get_variable_count_obj) },
-	{ MP_ROM_QSTR(MP_QSTR_change_variable_value), MP_ROM_PTR(&example_change_variable_value_obj) },
+    { MP_ROM_QSTR(MP_QSTR_change_variable_value), MP_ROM_PTR(&example_change_variable_value_obj) },
+    #ifdef DEBUG
     { MP_ROM_QSTR(MP_QSTR_test_alloc), MP_ROM_PTR(&example_test_alloc_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_store), MP_ROM_PTR(&example_test_store_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_see), MP_ROM_PTR(&example_test_see_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_free), MP_ROM_PTR(&example_test_free_obj) }
+    #endif
 
 };
 static MP_DEFINE_CONST_DICT(example_module_globals, example_module_globals_table);
