@@ -1,11 +1,10 @@
 # MicroFMU Test Library
 
-Ce projet a pour but de fournir une bibliothèque MicroPython permettant de lancer des simulations FMU (Functional Mock-up Units).
+This project aims to provide a MicroPython library to run FMU (Functional Mock-up Units) simulations.
 
-## Compilation
+## Step 1: Preparation of the library
 
-Pour compiler MicroPython avec cette bibliothèque, suivez les étapes suivantes :
-
+To compile MicroPython with this library, follow these steps:
 
 1. Open your terminal.
 
@@ -24,35 +23,35 @@ git clone https://github.com/Imaginus02/MicroFMU-library.git
 cd $micropython_dir/MicroFMU-library
 ```
 
-1. Placez votre fichier FMU dans le répertoire de la bibliothèque (au même niveau que ce README). Ce tutoriel utilise `BouncingBall.fmu`
-
+4. Place your FMU file in the library directory (at the same level as this README). This tutorial uses `BouncingBall.fmu`
 
 ```shell
 cp path/to/fmu/BouncingBall.fmu .
 ```
 
-2. Assurez-vous que `parseFMU.sh` est exécutable:
+5. Ensure that `parseFMU.sh` is executable:
 
 ```shell
 sudo chmod +x parseFMU.sh
 ```
 
-2. Lancez la commande make:
+6. Run the make command:
 
 ```shell
 make
 ```
 
-## Step 3: Build and Run MicroPython with "MicroPython-FMU"
+## Step 2: Build MicroPython with "ufmu"
 
 ### UNIX port
 
-3. Placez-vous dans le répertoire du port cible dans le projet MicroPython.
+1. Navigate to the target port directory in the MicroPython project.
 
 ```bash
 cd "$micropython_dir/ports/unix"
 ```
-4. Compilez MicroPython avec la commande suivante :
+
+2. Compile MicroPython with the following command:
 
 ```shell
 make submodules
@@ -65,10 +64,60 @@ After build, you can run it by:
 $ ./build-standard/micropython
 ```
 
+___
+### ESP32 port
+
+To build and deploy MicroPython with "MicroPython-FMU" on an ESP32, follow these steps:
+
+1. Navigate to the ESP32 port directory:
+
+```bash
+cd "$micropython_dir/ports/esp32"
+```
+
+2. Follow the steps in the [ESP32 README.md](https://github.com/micropython/micropython/blob/master/ports/esp32/README.md) until you reach the `make submodules` step.
+
+3. After running `make submodules`, connect your ESP32 to your computer. If you are on Windows, follow the appropriate steps for your WSL installation. If you are on Linux, skip to step 5.
+
+#### On WSL1
+*TODO: Add specific instructions for WSL1.*
+
+#### On WSL2
+Open PowerShell and run the following command to list all USB connected devices (you may need to install a powershell library using this [tutorial](https://learn.microsoft.com/en-us/windows/wsl/connect-usb):
+
+```powershell
+usbipd list
+```
+
+Identify your ESP32 device from the list and then run the following commands:
+
+```powershell
+usbipd bind --busid [bus-device]
+usbipd attach --wsl --busid [bus-device]
+```
+
+Note: The `usbipd bind` command only needs to be run once, even after disconnecting the ESP32.
+
+4. In WSL2, run the following commands to set up the USB serial connection:
+
+```bash
+sudo modprobe usbserial
+sudo modprobe cp210x
+sudo chmod a+rw /dev/ttyUSB0
+```
+
+5. Finally, erase the flash and deploy MicroPython with the FMU library:
+
+```bash
+make erase
+make deploy USER_C_MODULES=$micropython_dir/MicroFMU-library/micropython.cmake
+```
+
+## Run MicroPython with "ufmu"
 Initialize and run the simulation as follows:
 
 ```$ ./build-standard/micropython
->>> import FMUSimulator as fmu
+>>> import ufmu as fmu
 >>> fmu.get_variables_names()
 ('step', 'time', 'h', 'der(h)', 'v', 'der(v)', 'g', 'e')
 >>> fmu.get_variables_description()
@@ -91,57 +140,36 @@ With `BouncingBall.fmu`, you should get something like:
 2.800000000000001 8.034390000000011
 2.900000000000001 8.789760000000012
 ``` 
+## Project Structure
+- `micropython.cmake`: CMake file for compilation to ESP32.
+- `parseFMU.sh`: Script to parse and extract FMU files.
+- `Makefile`: Main Makefile for project compilation and cleanup management.
+- `library/`: Directory containing the project code.
+	- `headers/`: Folder of C files provided by the FMU standard necessary for simulator compilation.
+	- `micropython.mk`: Makefile for Unix compilation.
+	- `main.c`: Main C file containing the implementation of the simulator and MicroPython functions.
 
-### ESP32 port 
+## Cleanup
 
-
-```bash
-cd "$micropython_dir/ports/esp32"
-```
-
-Follow the steps in the [README.md](https://github.com/micropython/micropython/blob/master/ports/esp32/README.md)
-
-Then, after `make submodules`, run `make` with the following arguments: 
-
-
-```
-make USER_C_MODULES=$micropython_dir/MicroFMU-library/micropython.cmake
-```
-
-## Structure du projet
-- `micropython.cmake` : Fichier CMake pour la compilation vers ESP32.
-- `parseFMU.sh` : Script pour analyser et extraire les fichiers FMU.
-- `Makefile` : Fichier Makefile principal pour la gestion de la compilation et du nettoyage du projet.
-- `library/` : Répertoire contenant le code du projet.
-	- `headers/` : Dossier des fichiers C fournis par le standard FMU nécessaires pour la compilation du simulateur.
-	- `micropython.mk` : Fichier Makefile pour la compilation vers Unix.
-	- `main.c` : Fichier C principal contenant l'implémentation du simulateur et des fonctions MicroPython.
-
-
-## Utilisation
-
-
-## Nettoyage
-
-Pour nettoyer le projet, utilisez la commande suivante depuis le répertoire principal de la bibliothèque :
+To clean the project, use the following command from the main library directory:
 
 ```sh
 make clean
 ```
 
-Cela supprimera le répertoire `fmu` et son contenu, ainsi que le fichier modelDescription.c.  
-*Nb : Fonctionnel uniquement si lancé depuis le répertoire de la bibliothèque*  
+This will remove the `fmu` directory and its contents, as well as the modelDescription.c file.  
+*Note: Functional only if run from the library directory*  
 
-## Remarques
+## Remarks
 
-- Les fichiers `.fmu` seront automatiquement décompressés dans le répertoire `fmu` lors de la compilation.  
-- Le simulateur en C, sans les fonctions Python, est disponible [ici](https://github.com/Imaginus02/FMUSimulator)
+- The `.fmu` files will be automatically decompressed into the `fmu` directory during compilation.  
+- The C simulator, without the Python functions, is available [here](https://github.com/Imaginus02/FMUSimulator)
 
-## License
+## Licenses
 
 ### fmuSDK
 
-Les fichiers main.c et fmi2.c sont basé sur ceux du projet github [fmuSDK](https://github.com/qtronic/fmusdk)  
+The files main.c and fmi2.c are based on those from the GitHub project [fmuSDK](https://github.com/qtronic/fmusdk)  
 
 Copyright (c) 2008-2018, QTronic GmbH. All rights reserved. The FMU SDK is licensed by the copyright holder under the 2-Clause BSD License:
 
@@ -151,5 +179,3 @@ Redistribution and use in source and binary forms, with or without modification,
 - Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 
 **THIS SOFTWARE IS PROVIDED BY QTRONIC GMBH "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL QTRONIC GMBH BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.**
----
-Piste de débug : [Même problème avec seulement esp-idf]https://stackoverflow.com/questions/67039814/linker-error-in-esp-idf-framework-undefined-reference
