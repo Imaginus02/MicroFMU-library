@@ -37,7 +37,7 @@ find "$SEARCH_DIR" -type f -name '*.c' | while read -r file; do
     perl -0777 -pe '
         my $orig = $_;
         s{
-            (\b\w+\b)\s*=\s*(?:\(\s*\w+\s*\*\s*\)\s*)?calloc\s*\(\s*(.+?)\s*,\s*sizeof\s*\(\s*(\w+)\s*\)\s*\);
+            (\**\b\w+\b)\s*=\s*(?:\(\s*\w+\s*\*\s*\)\s*)?calloc\s*\(\s*(.+?)\s*,\s*sizeof\s*\(\s*(\w+)\s*\)\s*\);
         }{
             "#ifdef MICROPY_ESP_IDF_4\n        $1 = m_malloc(($2) * sizeof($3));\n#else\n        $1 = calloc($2, sizeof($3));\n#endif"
         }egx;
@@ -147,15 +147,36 @@ find "$SEARCH_DIR" -type f -name '*.c' | while read -r file; do
     perl -0777 -pe '
 		my $orig = $_;
 		s{
-			(.*\s*)\brealloc\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\)
+			(.*\s*)\brealloc\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\);
 		}{
-			"#ifdef MICROPY_ESP_IDF_4\n        ${1}m_realloc($2, $3);\n#else\n        ${1}realloc($2, $3);\n#endif"
+			"#ifdef MICROPY_ESP_IDF_4\n        ${1}m_realloc($2, $3);\n#else\n        ${1}m_realloc($2, $3, $3);\n#endif"
 		}egx;
         $_ eq $orig ? exit(1) : $_  # Return false if no changes made
     ' "$file" > "$tmpfile" && mv "$tmpfile" "$file" || rm "$tmpfile"
 done
 
 echo "Step 4 complete: realloc replaced with m_realloc."
+
+
+# Step 5: Add #include "py/obj.h" after #include "cosimulation.h"
+echo "Step 5: Adding #include \"py/obj.h\" after #include \"cosimulation.h\"..."
+
+find "$SEARCH_DIR" -type f -name '*.c' | while read -r file; do
+    tmpfile=$(mktemp)
+    
+    # Perform the insertion and only write back if there's a change
+    perl -0777 -pe '
+        my $orig = $_;
+        s{
+            (\#include\s+"cosimulation\.h")
+        }{
+            "$1\n#include \"py/obj.h\""
+        }egx;
+        $_ eq $orig ? exit(1) : $_  # Return false if no changes made
+    ' "$file" > "$tmpfile" && mv "$tmpfile" "$file" || rm "$tmpfile"
+done
+
+echo "Step 5 complete: #include \"py/obj.h\" added."
 
 # Final summary
 echo "Script execution complete."

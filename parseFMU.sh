@@ -7,6 +7,7 @@ output_file="library/modelDescription.c"
 cat <<EOT > "$output_file"
 #include <stdio.h>
 #include <stdlib.h>
+#include "py/obj.h"
 
 typedef enum { INTEGER, REAL, BOOLEAN, STRING } VarType;
 typedef enum { INDEPENDENT, PARAMETER, LOCAL, OUTPUT } Causality;
@@ -76,6 +77,7 @@ typedef struct {
 
 void initialize(ScalarVariable *var, char *name, int valueReference, char *description,
                 VarType type, void *start, void *min, void *max) {
+    memset(var, 0, sizeof(ScalarVariable));
     var->name = name;
     var->valueReference = valueReference;
     var->description = description;
@@ -226,7 +228,11 @@ EOT
 done <<< "$lines"
 
 
-echo "    (*variables) = (ScalarVariable*)calloc($counter, sizeof(ScalarVariable));" >> "$output_file"
+echo "    (*variables) = (ScalarVariable*)m_malloc($counter * sizeof(ScalarVariable));" >> "$output_file"
+echo "    if (!(*variables)) {"
+echo "            INFO(\"Memory allocation failed for variables\n\");"
+echo "            return -1; // Handle allocation failure"
+echo "        }"
 
 # Append the generated code to the output file
 echo -e "$temp_output" >> "$output_file"

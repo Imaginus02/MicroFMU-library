@@ -306,6 +306,14 @@ void cleanupSimulation(FMU *fmu, SimulationState *state) {
 #endif
     }
 
+    if (state->variables) {
+#ifdef MICROPY_ESP_IDF_4
+        m_free(state->variables);
+#else
+        m_free(state->variables, state->nVariables * sizeof(ScalarVariable));
+#endif
+    }
+
     // Free the state structure itself
 #ifdef MICROPY_ESP_IDF_4
     m_free(state);
@@ -347,13 +355,7 @@ SimulationState* initializeSimulation(FMU *fmu, double tStart, double tEnd, doub
     state->nStepEvents = 0;
 
     // Setup callback functions
-    void* my_calloc(size_t num, size_t size) {
-        void* ptr = m_malloc(num*size);
-        printf("Allocated %zu bytes\n", num * size);
-        return ptr;
-    }
-
-    fmi2CallbackFunctions callbacks = {fmuLogger, my_calloc, free, NULL, fmu};
+    fmi2CallbackFunctions callbacks = {fmuLogger, calloc, free, NULL, fmu};
 
     // Instantiate the FMU
     INFO("Instantiating FMU\n");
@@ -432,7 +434,7 @@ SimulationState* initializeSimulation(FMU *fmu, double tStart, double tEnd, doub
     INFO("Initializing variables and output array\n");
     get_variable_list(&state->variables);
     state->nVariables = get_variable_count();
-    state->output = (double*)m_malloc(state->nVariables*sizeof(double*));
+    state->output = (double*)m_malloc(state->nVariables*sizeof(double));
 
     // Initialize first output values
     for (int i = 0; i < state->nVariables; i++) {
@@ -599,16 +601,18 @@ fmi2Status simulationDoStep(FMU *fmu, SimulationState *state) {
 
     // Update outputs
     for (int i = 0; i < state->nVariables; i++) {
+        INFO("DEBUG: Step %f, i=%d, valueReference=%u, output=%f\n",state->time, i, state->variables[i].valueReference, state->output[i]);
         if (state->variables[i].type == REAL) {
             fmu->getReal(state->component, &state->variables[i].valueReference, 
                         1, &state->output[i]);
-			INFO("DEBUG:   %s (ref %d): %f\n", state->variables[i].name, 
+			INFO("DEBUG: DOUBLE %s (ref %d): %f\n", state->variables[i].name, 
                    state->variables[i].valueReference, state->output[i]);
         } else if (state->variables[i].type == INTEGER) {
             fmi2Integer intValue;
             fmu->getInteger(state->component, &state->variables[i].valueReference, 
                            1, &intValue);
             state->output[i] = (double)intValue;
+            INFO("DEBUG: INT %s (ref %d): %f\n", state->variables[i].name, state->variables[i].valueReference, state->output[i]);
         }
     }
 
@@ -634,25 +638,38 @@ static void example_SimulationInstance_print(const mp_print_t *print, mp_obj_t s
 }
 
 static mp_obj_t get_output_tuple(SimulationState* state) {
-    mp_obj_t *items = m_new(mp_obj_t, state->nVariables+1);
-	items[0] = mp_obj_new_int(state->nSteps);
-	for (int i = 0; i < state->nVariables; i++) {
-		items[i+1] = mp_obj_new_float(state->output[i]);
-	}
-	mp_obj_t tuple = mp_obj_new_tuple(state->nVariables, items);
-	return tuple;
+    if (!state || !state->output) {
+        return mp_const_none; // Handle invalid state or output array
+    }
+    mp_obj_t *items = m_new(mp_obj_t, state->nVariables + 1);
+    if (items == NULL) {
+        return mp_const_none;
+    }
+    items[0] = mp_obj_new_int(state->nSteps);
+    for (int i = 0; i < state->nVariables; i++) {
+        items[i + 1] = mp_obj_new_float(state->output[i]);
+    }
+    mp_obj_t tuple = mp_obj_new_tuple(state->nVariables + 1, items);
+#ifdef MICROPY_ESP_IDF_4
+    m_free(items);
+#else
+    m_free(items, state->nVariables + 1);
+#endif
+    return tuple;
 }
 
 // Fonction "itérable" appelée pour obtenir le prochain élément
 static mp_obj_t example_SimulationInstance_next(mp_obj_t self_in) {
 	example_Simulation_Instance_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
+    if (self->state.time >= self->state.tEnd || self->state.eventInfo.terminateSimulation) {
+		cleanupSimulation(fmu, &self->state);
+        return mp_make_stop_iteration(MP_OBJ_NULL); // Signal de fin
+	}
+
 	simulationDoStep(fmu, &self->state);
 
-	if (self->state.time >= self->state.tEnd || self->state.eventInfo.terminateSimulation) {
-		return mp_make_stop_iteration(MP_OBJ_NULL); // Signal de fin
-        cleanupSimulation(fmu, &self->state);
-	}
+	
 
 	return get_output_tuple(&self->state);
 } 
@@ -875,7 +892,7 @@ static mp_obj_t example_get_variables_description(size_t n_args, const mp_obj_t 
 static mp_obj_t example_test_alloc(mp_obj_t size) {
     void *ptr = m_malloc(mp_obj_get_int(size)*sizeof(float));
     if (ptr == NULL) {
-        mp_raise_msg(&mp_type_MemoryError, "Memory allocation failed");
+        mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Memory allocation failed"));
         return mp_obj_new_int(-1);
     }
     INFO("Allocated %lu bytes at %p\n", mp_obj_get_int(size) * sizeof(float), ptr);

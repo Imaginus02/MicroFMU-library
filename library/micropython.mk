@@ -20,8 +20,8 @@ CFLAGS_USERMOD += -I$(CLIBRARY_MOD_DIR) \
                   -Wall -Og -Wno-double-promotion -Wno-error\
                   -DFMI2_OVERRIDE_FUNCTION_PREFIX="" \
                   -fno-common -DFMI_VERSION=2 \
-                  -Wno-format
-#CFLAGS_USERMOD += -DDEBUG
+                  -Wno-format -DMICROPY_GC_CONSERVATIVE_CLEAR
+#CFLAGS_USERMOD += -DDEBUG -DMICROPY_DEBUG_VERBOSE
 
 $(info Compiling with: $(CC) $(CFLAGS) $(CFLAGS_USERMOD))
 #-Wno-double-promotion #-DMODEL_IDENTIFIER=BouncingBall -DModelFMI_COSIMULATION=0
