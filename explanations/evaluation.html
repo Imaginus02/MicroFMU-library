@@ -1,0 +1,228 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Evaluation &mdash; MicroFMU Documentation 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Challenges in Developing the MicroFMU Library" href="challenges.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            MicroFMU Documentation
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about.html">About the MicroFMU Library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../how_to_guides.html">How-to Guides</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../explanations.html">Explanations</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="design_choices.html">Design Choices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="workflow.html">Workflow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="challenges.html">Challenges in Developing the MicroFMU Library</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Evaluation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#test-environment">Test Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#performance-analysis">Performance Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#simulation-code">Simulation Code</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#results">Results</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#conclusion">Conclusion</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">MicroFMU Documentation</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../explanations.html">Explanations</a></li>
+      <li class="breadcrumb-item active">Evaluation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/explanations/evaluation.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="evaluation">
+<span id="id1"></span><h1>Evaluation<a class="headerlink" href="#evaluation" title="Link to this heading"></a></h1>
+<p>To ensure reliable and accurate performance measurements, each simulation was executed 10 times under identical conditions, with the mean value computed to minimize the effect of outliers. The simulations were conducted using the <cite>BouncingBall.fmu</cite> model with two step sizes: 0.01 and 0.0001, as detailed in the tables below.</p>
+<section id="test-environment">
+<h2>Test Environment<a class="headerlink" href="#test-environment" title="Link to this heading"></a></h2>
+<p>The experiments were performed on three different implementations:</p>
+<ul class="simple">
+<li><p><strong>Plain C Simulator</strong>: Executed within a WSL2 environment on a Windows 10 system with an Intel Core i7-10750H CPU.</p></li>
+<li><p><strong>MicroPython Unix Port</strong>: Also run within WSL2.</p></li>
+<li><p><strong>MicroPython ESP32</strong>: Executed directly on the embedded ESP32 hardware.</p></li>
+</ul>
+</section>
+<section id="performance-analysis">
+<h2>Performance Analysis<a class="headerlink" href="#performance-analysis" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>The <strong>Plain C simulator</strong> was the fastest, benefiting from low-level optimizations and minimal overhead. However, it has significantly higher memory usage since it stores all step results.</p></li>
+<li><p>The <strong>MicroPython Unix port</strong> performed well on smaller simulations but failed to complete the larger simulation (step size = 0.0001) due to a well-known bug.</p></li>
+<li><p>The <strong>MicroPython ESP32 implementation</strong> successfully completed both simulations with very low RAM usage, but is obviously slower due to CPU limitations.</p></li>
+</ul>
+</section>
+<section id="simulation-code">
+<h2>Simulation Code<a class="headerlink" href="#simulation-code" title="Link to this heading"></a></h2>
+<p>The following MicroPython script was used to measure execution time:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ufmu</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">fmu</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">micropython</span>
+
+<span class="n">start_time</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">end_time</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">step_size</span> <span class="o">=</span> <span class="n">XX</span>  <span class="c1"># Replaced with 0.01 or 0.0001</span>
+
+<span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">ticks_ms</span><span class="p">()</span>
+<span class="n">simInstance</span> <span class="o">=</span> <span class="n">fmu</span><span class="o">.</span><span class="n">setup_simulation</span><span class="p">(</span><span class="n">start_time</span><span class="p">,</span> <span class="n">end_time</span><span class="p">,</span> <span class="n">step_size</span><span class="p">)</span>
+<span class="n">fmu</span><span class="o">.</span><span class="n">change_variable_value</span><span class="p">(</span><span class="n">simInstance</span><span class="p">,</span> <span class="s1">&#39;h&#39;</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">simInstance</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Time taken: &quot;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">ticks_diff</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">ticks_ms</span><span class="p">(),</span> <span class="n">start</span><span class="p">),</span> <span class="s2">&quot;ms&quot;</span><span class="p">)</span>
+<span class="n">micropython</span><span class="o">.</span><span class="n">mem_info</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="results">
+<h2>Results<a class="headerlink" href="#results" title="Link to this heading"></a></h2>
+<p>Performance results are summarized in the tables below.</p>
+<table class="docutils align-center" id="id2">
+<caption><span class="caption-text">Performance with step_size = 0.01</span><a class="headerlink" href="#id2" title="Link to this table"></a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p><strong>Category</strong></p></th>
+<th class="head"><p><strong>Plain C Simulator</strong></p></th>
+<th class="head"><p><strong>MicroPython Unix</strong></p></th>
+<th class="head"><p><strong>MicroPython ESP32</strong></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Time (ms)</p></td>
+<td><p>1</p></td>
+<td><p>2</p></td>
+<td><p>139</p></td>
+</tr>
+<tr class="row-odd"><td><p>Memory usage (KB)</p></td>
+<td><p>1.632</p></td>
+<td><p>355</p></td>
+<td><p>21</p></td>
+</tr>
+<tr class="row-even"><td><p>Executable size (KB)</p></td>
+<td><p>112</p></td>
+<td><p>843</p></td>
+<td><p>1.725</p></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils align-center" id="id3">
+<caption><span class="caption-text">Performance with step_size = 0.0001. X means that the test couldn’t be conducted</span><a class="headerlink" href="#id3" title="Link to this table"></a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p><strong>Category</strong></p></th>
+<th class="head"><p><strong>Plain C Simulator</strong></p></th>
+<th class="head"><p><strong>MicroPython Unix</strong></p></th>
+<th class="head"><p><strong>MicroPython ESP32</strong></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Time (ms)</p></td>
+<td><p>1.005</p></td>
+<td><p>X</p></td>
+<td><p>141.309</p></td>
+</tr>
+<tr class="row-odd"><td><p>Memory usage (KB)</p></td>
+<td><p>64.032</p></td>
+<td><p>X</p></td>
+<td><p>46</p></td>
+</tr>
+<tr class="row-even"><td><p>Executable size (KB)</p></td>
+<td><p>112</p></td>
+<td><p>843</p></td>
+<td><p>1.725</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="conclusion">
+<h2>Conclusion<a class="headerlink" href="#conclusion" title="Link to this heading"></a></h2>
+<p>The results demonstrate that MicroPython provides a flexible, efficient, and easy-to use option to execute FMU simulation in embedded systems like ESP32.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="challenges.html" class="btn btn-neutral float-left" title="Challenges in Developing the MicroFMU Library" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Tom Reynaud.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
