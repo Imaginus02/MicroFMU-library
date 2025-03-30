@@ -6,3 +6,4 @@ testlibrary.c
 xmllintTest.sh
 free_replacement_debug.log
 .alloc
+docs/_build
