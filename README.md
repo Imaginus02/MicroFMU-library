@@ -1,6 +1,7 @@
 # MicroFMU Test Library
 
-This project aims to provide a MicroPython library to run FMU (Functional Mock-up Units) simulations.
+This project aims to provide a MicroPython library to run FMU (Functional Mock-up Units) simulations.  
+Documentation can be seen [here](https://imaginus02.github.io/MicroFMU-library/index.html)
 
 ## Step 1: Preparation of the library
 
