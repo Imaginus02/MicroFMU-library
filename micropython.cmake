@@ -19,7 +19,10 @@ target_include_directories(usermod_clibrary INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/library/fmu/sources
 )
 
-target_compile_definitions(usermod_clibrary INTERFACE FMI2_OVERRIDE_FUNCTION_PREFIX="Stair")
+target_compile_definitions(usermod_clibrary INTERFACE FMI2_OVERRIDE_FUNCTION_PREFIX="")
+
+# Add DEBUG argument to the compilation flags
+# target_compile_options(usermod_clibrary INTERFACE -DDEBUG)
 
 
 # Link the INTERFACE library to the usermod target
