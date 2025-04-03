@@ -9,6 +9,7 @@ CLIBRARY_MOD_DIR := $(USERMOD_DIR)
 # @echo "USERMOD_DIR is set to $(USERMOD_DIR)"
 # Ajouter tous les fichiers C à SRC_USERMOD :
 SRC_USERMOD += $(CLIBRARY_MOD_DIR)/main.c
+SRC_USERMOD += $(CLIBRARY_MOD_DIR)/ufmu_alloc.c
 #SRC_USERMOD += $(CLIBRARY_MOD_DIR)/fmu/sources/all.c
 SRC_USERMOD += $(CLIBRARY_MOD_DIR)/fmu/sources/fmi2Functions.c
 SRC_USERMOD += $(CLIBRARY_MOD_DIR)/fmu/sources/model.c

@@ -229,10 +229,9 @@ done <<< "$lines"
 
 
 echo "    (*variables) = (ScalarVariable*)m_malloc($counter * sizeof(ScalarVariable));" >> "$output_file"
-echo "    if (!(*variables)) {"
-echo "            INFO(\"Memory allocation failed for variables\n\");"
-echo "            return -1; // Handle allocation failure"
-echo "        }"
+echo "    if (!(*variables)) {" >> "$output_file"
+echo "            return -1; // Handle allocation failure" >> "$output_file"
+echo "        }" >> "$output_file"
 
 # Append the generated code to the output file
 echo -e "$temp_output" >> "$output_file"
