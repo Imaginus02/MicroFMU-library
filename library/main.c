@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include "./ufmu_alloc.h"
 #include "./headers/fmi2TypesPlatform.h"
 #include "./headers/fmi2FunctionTypes.h"
 #include "./headers/fmi2Functions.h"
@@ -269,63 +270,30 @@ void cleanupSimulation(FMU *fmu, SimulationState *state) {
 
     // Free state variables
     if (state->x) {
-#ifdef MICROPY_ESP_IDF_4
-        m_free(state->x);
-#else
-        m_free(state->x, state->nx * sizeof(double));
-#endif
+        ufmu_free(state->x);
     }
     if (state->xdot) {
-#ifdef MICROPY_ESP_IDF_4
-        m_free(state->xdot);
-#else
-        m_free(state->xdot, state->nx * sizeof(double));
-#endif
+        ufmu_free(state->xdot);
     }
     if (state->z) {
-#ifdef MICROPY_ESP_IDF_4
-        m_free(state->z);
-#else
-        m_free(state->z, state->nz * sizeof(double));
-#endif
+        ufmu_free(state->z);
     }
     if (state->prez) {
-#ifdef MICROPY_ESP_IDF_4
-        m_free(state->prez);
-#else
-        m_free(state->prez, state->nz * sizeof(double));
-#endif
+        ufmu_free(state->prez);
     }
 
     // Free output array
     if (state->output) {
-#ifdef MICROPY_ESP_IDF_4
-        m_free(state->output);
-#else
-        m_free(state->output, state->nVariables * sizeof(double));
-#endif
+        ufmu_free(state->output);
     }
 
     if (state->variables) {
-#ifdef MICROPY_ESP_IDF_4
-        m_free(state->variables);
-#else
-        m_free(state->variables, state->nVariables * sizeof(ScalarVariable));
-#endif
+        ufmu_free(state->variables);
     }
 
     // Free the state structure itself
-#ifdef MICROPY_ESP_IDF_4
-    m_free(state);
-#else
-    m_free(state, sizeof(SimulationState));
-#endif
-
-#ifdef MICROPY_ESP_IDF_4
-    m_free(fmu);
-#else
-    m_free(fmu, sizeof(FMU));
-#endif
+    ufmu_free(state);
+    ufmu_free(fmu);
 }
 
 /**
@@ -339,7 +307,7 @@ void cleanupSimulation(FMU *fmu, SimulationState *state) {
 SimulationState* initializeSimulation(FMU *fmu, double tStart, double tEnd, double h) {
 
     INFO("Initializing simulation\n");
-    SimulationState *state = (SimulationState*)m_malloc(1*sizeof(SimulationState));
+    SimulationState *state = (SimulationState*)ufmu_malloc(1,sizeof(SimulationState));
     if (!state) {
         INFO("Memory allocation failed for simulation state\n");
         return NULL;
@@ -373,7 +341,7 @@ SimulationState* initializeSimulation(FMU *fmu, double tStart, double tEnd, doub
 
     // Allocate memory for states and indicators
     INFO("Allocating memory for continuous state variables\n");
-    state->x = (double*)m_malloc(state->nx*sizeof(double));
+    state->x = (double*)ufmu_malloc((unsigned int)state->nx,sizeof(double));
     if (!state->x) {
         INFO("Memory allocation failed for continuous state variables\n");
         cleanupSimulation(fmu, state);
@@ -381,7 +349,7 @@ SimulationState* initializeSimulation(FMU *fmu, double tStart, double tEnd, doub
     }
 
     INFO("Allocating memory for state derivatives\n");
-    state->xdot = (double*)m_malloc(state->nx*sizeof(double));
+    state->xdot = (double*)ufmu_malloc((unsigned int)state->nx, sizeof(double));
     if (!state->xdot) {
         INFO("Memory allocation failed for state derivatives\n");
         cleanupSimulation(fmu, state);
@@ -390,14 +358,14 @@ SimulationState* initializeSimulation(FMU *fmu, double tStart, double tEnd, doub
 
     if (state->nz > 0) {
         INFO("Allocating memory for event indicators\n");
-        state->z = (double*)m_malloc(state->nz*sizeof(double));
+        state->z = (double*)ufmu_malloc((unsigned int)state->nz, sizeof(double));
         if (!state->z) {
             INFO("Memory allocation failed for event indicators\n");
             cleanupSimulation(fmu, state);
             return NULL;
         }
 
-        state->prez = (double*)m_malloc(state->nz*sizeof(double));
+        state->prez = (double*)ufmu_malloc((unsigned int)state->nz,sizeof(double));
         if (!state->prez) {
             INFO("Memory allocation failed for previous event indicators\n");
             cleanupSimulation(fmu, state);
@@ -434,7 +402,7 @@ SimulationState* initializeSimulation(FMU *fmu, double tStart, double tEnd, doub
     INFO("Initializing variables and output array\n");
     get_variable_list(&state->variables);
     state->nVariables = get_variable_count();
-    state->output = (double*)m_malloc(state->nVariables*sizeof(double));
+    state->output = (double*)ufmu_malloc((unsigned int)state->nVariables,sizeof(double));
 
     // Initialize first output values
     for (int i = 0; i < state->nVariables; i++) {
@@ -709,7 +677,7 @@ static mp_obj_t example_simulate(size_t n_args, const mp_obj_t *args) {
 	double tEnd = mp_obj_get_float(args[1]);
 	double h = mp_obj_get_float(args[2]);
 
-    fmu = (FMU*)m_malloc(1*sizeof(FMU));
+    fmu = (FMU*)ufmu_malloc(1,sizeof(FMU));
 
 	loadFunctions(fmu);
 	//simulate(&fmu, tStart, tEnd, h);
@@ -730,7 +698,7 @@ static mp_obj_t example_setup_simulation(size_t n_args, const mp_obj_t *args) {
 	double tEnd = mp_obj_get_float(args[1]);
 	double h = mp_obj_get_float(args[2]);
 
-    fmu = (FMU*)m_malloc(1*sizeof(FMU));
+    fmu = (FMU*)ufmu_malloc(1,sizeof(FMU));
     INFO("Allocated %u bytes for FMU\n", sizeof(FMU));
 
 	loadFunctions(fmu);
@@ -890,7 +858,7 @@ static mp_obj_t example_get_variables_description(size_t n_args, const mp_obj_t 
 
 #ifdef DEBUG
 static mp_obj_t example_test_alloc(mp_obj_t size) {
-    void *ptr = m_malloc(mp_obj_get_int(size)*sizeof(float));
+    void *ptr = ufmu_malloc((unsigned int)mp_obj_get_int(size),sizeof(float));
     if (ptr == NULL) {
         mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Memory allocation failed"));
         return mp_obj_new_int(-1);
@@ -911,11 +879,7 @@ static mp_obj_t example_test_see(mp_obj_t ptr, mp_obj_t pos) {
 }
 
 static mp_obj_t example_test_free(mp_obj_t ptr, mp_obj_t size) {
-    #ifdef MICROPY_ESP_IDF_4
-        m_free((void *)(intptr_t)mp_obj_get_int(ptr));
-    #else
-        m_free((void *)(intptr_t)mp_obj_get_int(ptr), mp_obj_get_int(size)*sizeof(float));
-    #endif
+        ufmu_free((void *)(intptr_t)mp_obj_get_int(ptr));
     return mp_const_none;
 }
 #endif
