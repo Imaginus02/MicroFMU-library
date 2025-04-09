@@ -3,11 +3,11 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
-#include "./headers/fmi2TypesPlatform.h"
-#include "./headers/fmi2FunctionTypes.h"
-#include "./headers/fmi2Functions.h"
-#include "./fmu/sources/config.h"
-#include "./fmu/sources/model.h"
+#include "headers/fmi2TypesPlatform.h"
+#include "headers/fmi2FunctionTypes.h"
+#include "headers/fmi2Functions.h"
+#include "fmu/sources/config.h"
+#include "fmu/sources/model.h"
 
 //Bibliothèque pour l'implémentation en micropython
 #include "py/obj.h"
