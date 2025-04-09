@@ -20,7 +20,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt update
-        sudo apt install -y build-essential libffi-dev pkg-config python3 python3-pytest python3-setuptools
+        sudo apt install -y build-essential libffi-dev pkg-config python3 python3-pytest python3-setuptools libxml2-utils
 
     - name: Clone MicroPython repository
       run: |
