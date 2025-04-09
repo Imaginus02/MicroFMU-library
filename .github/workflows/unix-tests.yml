@@ -29,7 +29,6 @@ jobs:
     - name: Download BouncingBall.fmu
       run: |
         curl -L -o BouncingBall.fmu https://github.com/modelon-community/PyFMI/raw/master/src/pyfmi/examples/files/FMUs/ME2.0/bouncingBall.fmu
-        mv BouncingBall.fmu $GITHUB_WORKSPACE
 
     - name: Print directory structure
       run: |
