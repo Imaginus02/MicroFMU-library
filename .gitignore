@@ -1,5 +1,4 @@
 fmu/
-tests/
 *.fmu
 modelDescription.c
 testlibrary.c
