@@ -53,6 +53,7 @@ jobs:
       run: |
         micropython_dir="$(pwd)/micropython"
         cd $micropython_dir/ports/unix
+        make clean
         make submodules
         make USER_C_MODULES=${GITHUB_WORKSPACE} -j$(nproc)
 
