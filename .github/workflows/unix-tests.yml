@@ -1,0 +1,71 @@
+name: Unix Port Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test-unix-port:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout MicroFMU-library
+      uses: actions/checkout@v4
+
+    - name: Set up Python for possible scripting
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential libffi-dev pkg-config python3 python3-pytest python3-setuptools
+
+    - name: Clone MicroPython repository
+      run: |
+        git clone -b v1.24.1 --depth 1 --recurse-submodules --shallow-submodules https://github.com/micropython/micropython.git
+
+    - name: Download BouncingBall.fmu
+      run: |
+        curl -L -o BouncingBall.fmu https://github.com/modelon-community/PyFMI/raw/master/src/pyfmi/examples/files/FMUs/ME2.0/bouncingBall.fmu
+        mv BouncingBall.fmu $GITHUB_WORKSPACE
+
+    - name: Print directory structure
+      run: |
+        echo "Directory structure:"
+        echo "===================="
+        find $GITHUB_WORKSPACE -type d
+        echo "===================="
+        ls -l $GITHUB_WORKSPACE
+        echo "===================="
+
+
+    - name: Make scripts executable
+      run: |
+        chmod +x parseFMU.sh
+        chmod +x changeCode.sh
+
+    - name: Make the library
+      run: |
+        make
+
+    - name: Build MicroPython Unix port with MicroFMU-library
+      run: |
+        micropython_dir="$(pwd)/micropython"
+        cd $micropython_dir/ports/unix
+        make submodules
+        make USER_C_MODULES=${GITHUB_WORKSPACE} -j$(nproc)
+
+    - name: Run MicroPython test script
+      run: |
+        micropython_dir="$(pwd)/micropython"
+        $micropython_dir/ports/unix/build-standard/micropython tests/test_unix.py
+
+    - name: Upload micropython binary as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: micropython-unix-binary
+        path: |
+          micropython/ports/unix/build-standard/micropython
+  
