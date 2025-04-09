@@ -8,11 +8,7 @@ cat <<EOT > "$output_file"
 #include <stdio.h>
 #include <stdlib.h>
 #include "py/obj.h"
-
-typedef enum { INTEGER, REAL, BOOLEAN, STRING } VarType;
-typedef enum { INDEPENDENT, PARAMETER, LOCAL, OUTPUT } Causality;
-typedef enum { CONSTANT, FIXED, TUNABLE, DISCRETE, CONTINUOUS } Variability;
-typedef enum { EXACT, APPROX, CALCULATED } Initial;
+#include "./modelDescription.h"
 EOT
 
 # On doit commencer par parser le tag TypeDefinitions pour créer une enum pour chaque type
@@ -43,38 +39,6 @@ fi
 
 
 cat <<EOT >> "$output_file"
-typedef struct {
-	int version;
-	char *modelName;
-	char *description;
-	char *guid;
-	int numberOfEventIndicators;
-	int numberOfContinuousStates;
-} ModelDescription;
-
-typedef struct {
-    char *name;
-    unsigned int valueReference;
-	Causality causality;
-	Variability variability;
-	Initial initial;
-    char *description;
-    VarType type;
-    union {
-        int intValue;
-        double realValue;
-    } start;
-    union {
-        int intMin;
-        double realMin;
-    } min;
-    union {
-        int intMax;
-        double realMax;
-    } max;
-} ScalarVariable;
-
-
 void initialize(ScalarVariable *var, char *name, int valueReference, char *description,
                 VarType type, void *start, void *min, void *max) {
     memset(var, 0, sizeof(ScalarVariable));
@@ -247,7 +211,7 @@ echo "    return $counter;" >> "$output_file"
 echo "}" >> "$output_file"
 
 #Constant number of variables
-echo "#define NVARIABLES $counter" >> "$output_file"
+sed -i "s/^#define NVARIABLES [0-9]*/#define NVARIABLES $counter/" library/modelDescription.h
 
 
 # On va maintenant parser le <fmiModelDescription> pour extraire les informations qui nous intéressent
