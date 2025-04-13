@@ -25,19 +25,20 @@ jobs:
     - name: Clone MicroPython repository
       run: |
         git clone -b v1.24.1 --depth 1 --recurse-submodules --shallow-submodules https://github.com/micropython/micropython.git
-
-    - name: Download BouncingBall.fmu
+    
+# TODO: support this one : https://github.com/modelon-community/PyFMI/raw/master/src/pyfmi/examples/files/FMUs/ME2.0/bouncingBall.fmu
+    - name: copy FMU file
       run: |
-        curl -L -o BouncingBall.fmu https://github.com/modelon-community/PyFMI/raw/master/src/pyfmi/examples/files/FMUs/ME2.0/bouncingBall.fmu
+        cp tests/BouncingBall.fmu BouncingBall.fmu
 
-    - name: Print directory structure
-      run: |
-        echo "Directory structure:"
-        echo "===================="
-        find $GITHUB_WORKSPACE -type d
-        echo "===================="
-        ls -l $GITHUB_WORKSPACE
-        echo "===================="
+#    - name: Print directory structure
+#      run: |
+#        echo "Directory structure:"
+#        echo "===================="
+#        find $GITHUB_WORKSPACE -type d
+#        echo "===================="
+#        ls -l $GITHUB_WORKSPACE
+#        echo "===================="
 
 
     - name: Make scripts executable

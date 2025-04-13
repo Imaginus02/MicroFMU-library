@@ -1,5 +1,5 @@
 fmu/
-*.fmu
+/*.fmu
 modelDescription.c
 testlibrary.c
 xmllintTest.sh
