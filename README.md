@@ -3,6 +3,11 @@
 This project aims to provide a MicroPython library to run FMU (Functional Mock-up Units) simulations.  
 Documentation can be seen [here](https://imaginus02.github.io/MicroFMU-library/index.html)
 
+## How to cite
+
+> Reynaud, T., Enferad, E. and Lefrançois, M. (2025). Facilitating the use of Physics-Based Simulations on Embedded Devices by running FMUs from MicroPython. In: Proceedings of the 16th International Modelica and FMI Conference. Lucerne, Switzerland.
+
+
 ## Step 1: Preparation of the library
 
 To compile MicroPython with this library, follow these steps:
